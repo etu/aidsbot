@@ -4,7 +4,7 @@
 '''
 
 aidsbot - A simple irc bot library for python
-Copyright (C) 2011 Adam Hose <adisbladis@m68k.se>
+Copyright (C) 2011 Adam Hose <adis@blad.is>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -29,11 +29,6 @@ import threading
 
 class aidsbot ():
     '''Handle IRC connections'''
-
-    '''
-    Basic behavior:
-    Throw exception IRCError when not following RFC 1459
-    '''
 
     def __init__(self, botname, network, port, debug = False):
         self.network = network
