@@ -29,6 +29,12 @@ import threading
 
 class aidsbot ():
     '''Handle IRC connections'''
+
+    '''
+    Basic behavior:
+    Throw exception IRCError when not following RFC 1459
+    '''
+
     def __init__(self, botname, network, port, debug = False):
         self.network = network
         self.port    = port
@@ -39,11 +45,14 @@ class aidsbot ():
         self.chanophandler  = {}
         self.chanlist= []
         self.failed  = False
+        self.password = ""
 
     def connect(self):
         '''Connect'''
         self.socket = socket.socket()
         self.socket.connect((self.network, self.port))
+        if self.password != "":
+            self.send("PASS %s" % (self.password))
         self.send("NICK %s" % (self.botname),True)
         self.send("USER %s %s bla :%s" % (self.botname, self.network, self.botname),True)
         try: self.postconnect(self)
@@ -55,23 +64,52 @@ class aidsbot ():
         if addlist:
             self.chanlist.append(channel)
         return self.send("JOIN :%s" % channel)
+
+    def oper(self,user,password):
+        '''Authenticate as IRC operator'''
+        irc.send("OPER %s %s" % (user,password))
+
+    def part(self,channel):
+        '''Part a channel'''
+        irc.send("PART %s" % channel)
+
+    def topic(self,channel,topic):
+        '''Set topic for channel'''
+        irc.send("TOPIC %s %s" % (channel,topic))
+
+    def invite(self,nickname,channel):
+        '''Invite user for channel'''
+        irc.send("INVITE %s %s" % (nickname,channel))
     
     def privmsg(self, target, message):
         '''Send message to target'''
         return self.send("PRIVMSG %s :%s" % (target, message))
 
-    def mode(self, user, mode, channel = ''):
-        '''Change user/channel modes on target'''
+    def mode(self, mode, channel='', user=''):
+        '''
+        Change user/channel modes on target
+        user or channel is mandatory
+        '''
+
+        #Check args
+        if user == '' and channel == '':
+            return False
+
         return self.send("MODE %s %s %s" % (channel, mode, user))
     
-    def kick(self, channel, user, reason = None):
+    def kick(self, channel, user, reason = ""):
         '''Kick user from channel for reason'''
         return self.send("KICK %s %s :%s" % (channel, user, reason))
-    
     
     def send(self, command, override=False):
         '''Send a raw command to the socket'''
         #Dont try to send if network has failed
+
+        #Follow RFC 1459, do not send more than 512B
+        command=str(command)
+        if len(command) > 510:
+            raise Exception("IRCError")
+
         if not self.failed or override:
             self.socket.send("%s\r\n" % command)
         else:
