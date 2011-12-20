@@ -29,7 +29,7 @@ import threading
 
 class aidsbot ():
     '''Handle IRC connections'''
-
+    
     def __init__(self, botname, network, port, debug = False):
         self.network = network
         self.port    = port
@@ -41,7 +41,7 @@ class aidsbot ():
         self.chanlist= []
         self.failed  = False
         self.password = ""
-
+    
     def connect(self):
         '''Connect'''
         self.socket = socket.socket()
@@ -53,25 +53,25 @@ class aidsbot ():
         try: self.postconnect(self)
         except: pass
         self.failed=False
-
+    
     def join(self, channel, addlist=True):
         '''Join channel'''
         if addlist:
             self.chanlist.append(channel)
         return self.send("JOIN :%s" % channel)
-
+    
     def oper(self,user,password):
         '''Authenticate as IRC operator'''
         irc.send("OPER %s %s" % (user,password))
-
+    
     def part(self,channel):
         '''Part a channel'''
         irc.send("PART %s" % channel)
-
+    
     def topic(self,channel,topic):
         '''Set topic for channel'''
         irc.send("TOPIC %s %s" % (channel,topic))
-
+    
     def invite(self,nickname,channel):
         '''Invite user for channel'''
         irc.send("INVITE %s %s" % (nickname,channel))
@@ -79,17 +79,17 @@ class aidsbot ():
     def privmsg(self, target, message):
         '''Send message to target'''
         return self.send("PRIVMSG %s :%s" % (target, message))
-
+    
     def mode(self, mode, channel='', user=''):
         '''
         Change user/channel modes on target
         user or channel is mandatory
         '''
-
+        
         #Check args
         if user == '' and channel == '':
             return False
-
+        
         return self.send("MODE %s %s %s" % (channel, mode, user))
     
     def kick(self, channel, user, reason = ""):
@@ -115,16 +115,16 @@ class aidsbot ():
         self.run = False
         self.send('QUIT')
         self.socket.close()
-
+    
     def privmsghandler_add(self,command,function):
         '''Add function as handler for trigger'''
         command = ":" + command
         self.privmsghandler[command]=function
-
+    
     def chanophandler_add(self,chanop,function):
         '''Add function as handler for channel operation'''
         self.chanophandler[chanop]=function
-
+    
     def privmsg_split(self,data):
         '''Split data for easy usage'''
         data = data.split()
@@ -135,7 +135,7 @@ class aidsbot ():
         for i in range(4,len(data)):
             message = message + " " + data[i]
         return user_info, msg_type, channel, message        
-
+    
     def user_split(self,data):
         '''Split the user-data'''
         nick, rest = data.split("!")
@@ -143,27 +143,27 @@ class aidsbot ():
         real_user=rest.split("@")[0]
         host=rest.split("@")[1]
         return nick, real_user, host
-
+    
     def listen(self):
         '''Start listener in thread'''
         thread.start_new_thread(self.listener, ())
-
+    
     def listener(self):
         '''Listener, should be started from listen() instead'''
         while self.run:
             data = self.socket.recv(512)
-
+            
             #Reply to ping :)
             if data.find('PING') != -1:
                 self.send('PONG ' + data.split()[1] + "\r\n")
-
+            
             #Handle user commands
             user_input = data.split()
             try:
                 chanop = user_input[1]
             except IndexError:
                 chanop = "FAIL" #Network failed
-
+            
             #Check for trigger
             if chanop == "PRIVMSG":
                 command = user_input[3]
@@ -181,11 +181,11 @@ class aidsbot ():
                         self.failed=True
                 for chan in self.chanlist:
                     self.join(chan,False)
-
+            
             #Always try chanop
             try: thread.start_new_thread(self.chanophandler[chanop], (self,data))
             except: pass #Unhandled
-
+            
             #Debug messages
             if self.debug == True:
                 print data
