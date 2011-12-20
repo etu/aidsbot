@@ -40,73 +40,73 @@ class aidsbot ():
         self.chanophandler  = {}
         self.chanlist= []
         self.failed  = False
-        self.password = ""
+        self.password = ''
     
     def connect(self):
         '''Connect'''
         self.socket = socket.socket()
         self.socket.connect((self.network, self.port))
-        if self.password != "":
-            self.send("PASS %s" % (self.password))
-        self.send("NICK %s" % (self.botname),True)
-        self.send("USER %s %s bla :%s" % (self.botname, self.network, self.botname),True)
+        if self.password != '':
+            self.send('PASS %s' % (self.password))
+        self.send('NICK %s' % (self.botname), True)
+        self.send('USER %s %s bla :%s' % (self.botname, self.network, self.botname), True)
         try: self.postconnect(self)
         except: pass
-        self.failed=False
+        self.failed = False
     
-    def join(self, channel, addlist=True):
+    def join(self, channel, addlist = True):
         '''Join channel'''
         if addlist:
             self.chanlist.append(channel)
-        return self.send("JOIN :%s" % channel)
+        return self.send('JOIN :%s' % channel)
     
-    def oper(self,user,password):
+    def oper(self, user, password):
         '''Authenticate as IRC operator'''
-        irc.send("OPER %s %s" % (user,password))
+        irc.send('OPER %s %s' % (user, password))
     
-    def part(self,channel):
+    def part(self, channel):
         '''Part a channel'''
-        irc.send("PART %s" % channel)
+        irc.send('PART %s' % channel)
     
-    def topic(self,channel,topic):
+    def topic(self, channel, topic):
         '''Set topic for channel'''
-        irc.send("TOPIC %s %s" % (channel,topic))
+        irc.send('TOPIC %s %s' % (channel, topic))
     
-    def invite(self,nickname,channel):
+    def invite(self, nickname, channel):
         '''Invite user for channel'''
-        irc.send("INVITE %s %s" % (nickname,channel))
+        irc.send('INVITE %s %s' % (nickname, channel))
     
     def privmsg(self, target, message):
         '''Send message to target'''
-        return self.send("PRIVMSG %s :%s" % (target, message))
+        return self.send('PRIVMSG %s :%s' % (target, message))
     
-    def mode(self, mode, channel='', user=''):
+    def mode(self, mode, channel = '', user = ''):
         '''
         Change user/channel modes on target
         user or channel is mandatory
         '''
         
-        #Check args
+        # Check args
         if user == '' and channel == '':
             return False
         
-        return self.send("MODE %s %s %s" % (channel, mode, user))
+        return self.send('MODE %s %s %s' % (channel, mode, user))
     
-    def kick(self, channel, user, reason = ""):
+    def kick(self, channel, user, reason = ''):
         '''Kick user from channel for reason'''
-        return self.send("KICK %s %s :%s" % (channel, user, reason))
+        return self.send('KICK %s %s :%s' % (channel, user, reason))
     
-    def send(self, command, override=False):
+    def send(self, command, override = False):
         '''Send a raw command to the socket'''
         
-        #Follow RFC 1459, do not send more than 512B
+        # Follow RFC 1459, do not send more than 512B
         command=str(command)
         if len(command) > 510:
-            raise Exception("IRCError")
+            raise Exception('IRCError')
         
-        #Dont try to send if network has failed
+        # Dont try to send if network has failed
         if not self.failed or override:
-            self.socket.send("%s\r\n" % command)
+            self.socket.send('%s\r\n' % command)
         else:
             return None
     
@@ -116,32 +116,32 @@ class aidsbot ():
         self.send('QUIT')
         self.socket.close()
     
-    def privmsghandler_add(self,command,function):
+    def privmsghandler_add(self, command, function):
         '''Add function as handler for trigger'''
-        command = ":" + command
+        command = ':' + command
         self.privmsghandler[command]=function
     
-    def chanophandler_add(self,chanop,function):
+    def chanophandler_add(self, chanop, function):
         '''Add function as handler for channel operation'''
-        self.chanophandler[chanop]=function
+        self.chanophandler[chanop] = function
     
-    def privmsg_split(self,data):
+    def privmsg_split(self, data):
         '''Split data for easy usage'''
         data = data.split()
         user_info = data[0]
         msg_type = data[1]
         channel = data[2]
         message = data[3]
-        for i in range(4,len(data)):
-            message = message + " " + data[i]
+        for i in range(4, len(data)):
+            message = message + ' ' + data[i]
         return user_info, msg_type, channel, message        
     
-    def user_split(self,data):
+    def user_split(self, data):
         '''Split the user-data'''
-        nick, rest = data.split("!")
-        nick=nick.replace(":","",1)
-        real_user=rest.split("@")[0]
-        host=rest.split("@")[1]
+        nick, rest = data.split('!')
+        nick=nick.replace(':', '', 1)
+        real_user=rest.split('@')[0]
+        host=rest.split('@')[1]
         return nick, real_user, host
     
     def listen(self):
@@ -153,39 +153,39 @@ class aidsbot ():
         while self.run:
             data = self.socket.recv(512)
             
-            #Reply to ping :)
+            # Reply to ping :)
             if data.find('PING') != -1:
-                self.send('PONG ' + data.split()[1] + "\r\n")
+                self.send('PONG ' + data.split()[1])
             
-            #Handle user commands
+            # Handle user commands
             user_input = data.split()
             try:
                 chanop = user_input[1]
             except IndexError:
-                chanop = "FAIL" #Network failed
+                chanop = 'FAIL' # Network failed
             
-            #Check for trigger
-            if chanop == "PRIVMSG":
+            # Check for trigger
+            if chanop == 'PRIVMSG':
                 command = user_input[3]
                 try:
-                    thread.start_new_thread(self.privmsghandler[command], (self,data))
-                except KeyError: pass #Unhandled
-            elif chanop == "FAIL":
-                #Reconnect if failure
-                self.failed=True
+                    thread.start_new_thread(self.privmsghandler[command], (self, data))
+                except KeyError: pass # Unhandled
+            elif chanop == 'FAIL':
+                # Reconnect if failure
+                self.failed = True
                 while self.failed:
                     time.sleep(5)
                     try:
                         self.connect()
                     except socket.error:
-                        self.failed=True
+                        self.failed = True
                 for chan in self.chanlist:
-                    self.join(chan,False)
+                    self.join(chan, False)
             
-            #Always try chanop
-            try: thread.start_new_thread(self.chanophandler[chanop], (self,data))
+            # Always try chanop
+            try: thread.start_new_thread(self.chanophandler[chanop], (self, data))
             except: pass #Unhandled
             
-            #Debug messages
+            # Debug messages
             if self.debug == True:
                 print data
