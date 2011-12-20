@@ -184,8 +184,8 @@ class aidsbot ():
             
             # Always try chanop
             try: thread.start_new_thread(self.chanophandler[chanop], (self, data))
-            except: pass #Unhandled
+            except: pass # Unhandled
             
             # Debug messages
             if self.debug == True:
-                print data
+                print(data)
