@@ -16,7 +16,12 @@ def join(irc,data):
 def part(irc,data):
     print "A user has parted"
 
+def postconnect(irc):
+    '''Triggers after connect, before joining channels. Good for OPER and other login commands.'''
+    print "Connected to network"
+
 irc = aidsbot('aidsbot-dev', 'irc.oftc.net', 6667, True) #Set up the object
+irc.postconnect = postconnect # Define the postconnect trigger BEFORE connect
 irc.connect() #Actually connect
 irc.join('#bottest') #Join a channel
 irc.privmsg('#bottest', 'Yo!') #Send a message
