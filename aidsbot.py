@@ -98,13 +98,13 @@ class aidsbot ():
     
     def send(self, command, override=False):
         '''Send a raw command to the socket'''
-        #Dont try to send if network has failed
-
+        
         #Follow RFC 1459, do not send more than 512B
         command=str(command)
         if len(command) > 510:
             raise Exception("IRCError")
-
+        
+        #Dont try to send if network has failed
         if not self.failed or override:
             self.socket.send("%s\r\n" % command)
         else:
