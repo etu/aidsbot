@@ -62,19 +62,19 @@ class aidsbot ():
     
     def oper(self, user, password):
         '''Authenticate as IRC operator'''
-        irc.send('OPER %s %s' % (user, password))
+        return self.send('OPER %s %s' % (user, password))
     
     def part(self, channel):
         '''Part a channel'''
-        irc.send('PART %s' % channel)
+        return self.send('PART %s' % channel)
     
     def topic(self, channel, topic):
         '''Set topic for channel'''
-        irc.send('TOPIC %s %s' % (channel, topic))
+        return self.send('TOPIC %s %s' % (channel, topic))
     
     def invite(self, nickname, channel):
         '''Invite user for channel'''
-        irc.send('INVITE %s %s' % (nickname, channel))
+        return self.send('INVITE %s %s' % (nickname, channel))
     
     def privmsg(self, target, message):
         '''Send message to target'''
