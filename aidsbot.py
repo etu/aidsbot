@@ -66,6 +66,9 @@ class aidsbot ():
     
     def part(self, channel):
         '''Part a channel'''
+        try: self.chanlist.remove(channel)
+        except: pass
+        
         return self.send('PART %s' % channel)
     
     def topic(self, channel, topic):
