@@ -76,6 +76,10 @@ class aidsbot ():
         '''Invite user for channel'''
         return self.send('INVITE %s %s' % (nickname, channel))
     
+    def notice(self, target, message):
+        '''Send a notice to target'''
+        return self.send('NOTICE %s %s' % (target, message))
+    
     def privmsg(self, target, message):
         '''Send message to target'''
         return self.send('PRIVMSG %s :%s' % (target, message))
