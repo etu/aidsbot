@@ -23,6 +23,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 '''
 
 import socket
+import ssl
 import thread
 import time
 import threading
@@ -33,6 +34,7 @@ class aidsbot ():
     def __init__(self, botname, network, port, debug = False):
         self.network = network
         self.port    = port
+        self.ssl     = False
         self.botname = botname
         self.debug   = debug
         self.run     = True
@@ -44,7 +46,12 @@ class aidsbot ():
     
     def connect(self):
         '''Connect'''
-        self.socket = socket.socket()
+        if self.ssl:
+            s = socket.socket()
+            self.socket = ssl.wrap_socket(s, cert_reqs=ssl.CERT_NONE, ssl_version=ssl.PROTOCOL_SSLv3)
+        else:
+            self.socket = socket.socket()
+        
         self.socket.connect((self.network, self.port))
         if self.password != '':
             self.send('PASS %s' % (self.password))
@@ -113,7 +120,10 @@ class aidsbot ():
         
         # Dont try to send if network has failed
         if not self.failed or override:
-            self.socket.send('%s\r\n' % command)
+            if self.ssl:
+                self.socket.write('%s\r\n' % command)
+            else:
+                self.socket.send('%s\r\n' % command)
         else:
             return None
     
