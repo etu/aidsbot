@@ -46,11 +46,11 @@ class aidsbot ():
     
     def connect(self):
         '''Connect'''
+        s = socket.socket()
         if self.ssl:
-            s = socket.socket()
             self.socket = ssl.wrap_socket(s, cert_reqs=ssl.CERT_NONE, ssl_version=ssl.PROTOCOL_SSLv3)
         else:
-            self.socket = socket.socket()
+            self.socket = s
         
         self.socket.connect((self.network, self.port))
         if self.password != '':
