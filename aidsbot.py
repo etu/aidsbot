@@ -228,5 +228,4 @@ class aidsbot ():
             
             # Debug messages
             if self.debug == True:
-                pass
-                #print(data)
+                print(data)
