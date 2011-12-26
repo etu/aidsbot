@@ -43,6 +43,7 @@ class aidsbot ():
         self.chanlist= []
         self.failed  = False
         self.password = ''
+        self.topics = {}
     
     def connect(self):
         '''Connect'''
@@ -78,9 +79,23 @@ class aidsbot ():
         
         return self.send('PART %s' % channel)
     
-    def topic(self, channel, topic):
-        '''Set topic for channel'''
-        return self.send('TOPIC %s %s' % (channel, topic))
+    def topic(self, channel, topic=None):
+        '''Set/get topic for channel'''
+        if topic == None:
+            try:
+                timestamp=self.topics[channel][1]
+            except KeyError:
+                timestamp=time.time()
+                self.topics[channel]=(None,timestamp)
+
+            self.send('TOPIC %s' % (channel))
+
+            while self.topics[channel][1] == timestamp:
+                time.sleep(0.01)
+
+            return(self.topics[channel][0])
+        else:
+            self.send('TOPIC %s %s' % (channel, topic))
     
     def invite(self, nickname, channel):
         '''Invite user for channel'''
@@ -181,6 +196,14 @@ class aidsbot ():
             except IndexError:
                 chanop = 'FAIL' # Network failed
             
+            #Static handling methods
+            if chanop == 'TOPIC': #We recived a topic update
+                topic = data.split(":",2)
+                self.topics[topic[1].split("TOPIC ")[1].rstrip(None)]=(topic[2].rstrip("\r\n"),time.time())
+            if chanop == '332': #We recived a topic update
+                topic = data.split(self.botname,1)[1].split(":")
+                self.topics[topic[0].rstrip(None).lstrip(None)]=(topic[1].rstrip("\r\n"),time.time())
+
             # Check for trigger
             if chanop == 'PRIVMSG':
                 command = user_input[3]
@@ -205,4 +228,5 @@ class aidsbot ():
             
             # Debug messages
             if self.debug == True:
-                print(data)
+                pass
+                #print(data)
