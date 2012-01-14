@@ -193,6 +193,7 @@ class aidsbot ():
                 # Handle the command IF THE COMMAND IS COMPLETE
                 if line.startswith(':') and line.endswith('\r'):
                     self.__handler(line)
+                    save = ''
                 
                 # Save the noncomplete command for next run
                 elif line.startswith(':'):
@@ -218,23 +219,26 @@ class aidsbot ():
         except IndexError:
             chanop = 'FAIL' # Network failed
         
+        # Try custom chanop handlers
+        try: thread.start_new_thread(self.chanophandler[chanop], (self, data))
+        except: pass
+        
+        # Try custom triggers
+        if chanop == 'PRIVMSG':
+            triggers = user_input[3]
+            try: thread.start_new_thread(self.privmsghandler[triggers], (self, data))
+            except KeyError: pass
+        
         # Static handling methods
-        if chanop == 'TOPIC': # We recived a topic update
+        elif chanop == 'TOPIC': # We recived a topic update
             topic = data.split(":",2)
             self.topics[topic[1].split("TOPIC ")[1].rstrip(None)]=(topic[2].rstrip("\r\n"),time.time())
-        if chanop == '332': # We recived a topic update
+        elif chanop == '332': # We recived a topic update
             topic = data.split(self.botname,1)[1].split(":")
             self.topics[topic[0].rstrip(None).lstrip(None)]=(topic[1].rstrip("\r\n"),time.time())
         
-        # Check for trigger
-        if chanop == 'PRIVMSG':
-            command = user_input[3]
-            try:
-                thread.start_new_thread(self.privmsghandler[command], (self, data))
-            except KeyError: pass # Unhandled
-        
-        if chanop == 'FAIL':
-            # Reconnect if failure
+        # Reconnect on failure
+        elif chanop == 'FAIL':
             self.failed = True
             while self.failed:
                 time.sleep(5)
@@ -246,9 +250,6 @@ class aidsbot ():
             for chan in self.chanlist:
                 self.join(chan, False)
         
-        # Always try chanop
-        try: thread.start_new_thread(self.chanophandler[chanop], (self, data))
-        except: pass # Unhandled
         
         # Debug messages
         if self.debug == True:
