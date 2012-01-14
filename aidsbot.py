@@ -62,6 +62,21 @@ class aidsbot ():
         except: pass
         self.failed = False
     
+    def send(self, command, override = False):
+        '''Send a raw command to the socket'''
+        
+        # Follow RFC 1459, do not send more than 512B
+        command=str(command)
+        if len(command) > 510:
+            raise Exception('IRCError')
+        
+        # Dont try to send if network has failed
+        if not self.failed or override:
+            self.socket.send('%s\r\n' % command)
+        
+        else:
+            return None
+    
     def join(self, channel, addlist = True):
         '''Join channel'''
         if addlist:
@@ -124,23 +139,6 @@ class aidsbot ():
     def kick(self, channel, user, reason = ''):
         '''Kick user from channel for reason'''
         return self.send('KICK %s %s :%s' % (channel, user, reason))
-    
-    def send(self, command, override = False):
-        '''Send a raw command to the socket'''
-        
-        # Follow RFC 1459, do not send more than 512B
-        command=str(command)
-        if len(command) > 510:
-            raise Exception('IRCError')
-        
-        # Dont try to send if network has failed
-        if not self.failed or override:
-            if self.ssl:
-                self.socket.write('%s\r\n' % command)
-            else:
-                self.socket.send('%s\r\n' % command)
-        else:
-            return None
     
     def stop(self):
         '''Stop'''
@@ -250,8 +248,7 @@ class aidsbot ():
             for chan in self.chanlist:
                 self.join(chan, False)
         
-        
         # Debug messages
         if self.debug == True:
             print(data)
-        
+
