@@ -188,19 +188,23 @@ class aidsbot ():
             # Splitting at end of command
             for line in data.split('\n'):
                 
-                # Handle the command IF THE COMMAND IS COMPLETE
+                # Handle complete command
                 if line.startswith(':') and line.endswith('\r'):
                     self.__handler(line)
                     save = ''
                 
-                # Save the noncomplete command for next run
-                elif line.startswith(':'):
+                # Handle beginning of command
+                elif line.startswith(':') and not line.endswith('\r'):
                     save = line
                 
-                # Recived the end of a command, but not start.
-                else:
+                # Handle end of command
+                elif not line.startswith(':') and line.endswith('\r'):
                     self.__handler(save + line)
                     save = ''
+                
+                # Handle some middle part of command
+                else:
+                    save = save + line
     
     def __handler(self, line):
         data = line.strip()
