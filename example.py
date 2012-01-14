@@ -22,7 +22,7 @@ def postconnect(irc):
 
 irc = aidsbot('aidsbot-dev', 'irc.oftc.net', 6667, True) # Set up the object
 irc.ssl = False # Set this to True if you want to connect to an SSL Port
-irc.postconnect = postconnect # Define the postconnect trigger BEFORE connect
+irc.postconnect = postconnect # Define the postconnect trigger AFTER connect, but BEFORE JOINS
 irc.connect() # Actually connect
 irc.join('#bottest') #Join a channel
 irc.privmsg('#bottest', 'Yo!') # Send a message
