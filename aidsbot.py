@@ -87,12 +87,12 @@ class aidsbot ():
             except KeyError:
                 timestamp=time.time()
                 self.topics[channel]=(None,timestamp)
-
+            
             self.send('TOPIC %s' % (channel))
-
+            
             while self.topics[channel][1] == timestamp:
                 time.sleep(0.01)
-
+            
             return(self.topics[channel][0])
         else:
             self.send('TOPIC %s %s' % (channel, topic))
@@ -178,54 +178,79 @@ class aidsbot ():
     
     def listen(self):
         '''Start listener in thread'''
-        thread.start_new_thread(self.listener, ())
+        thread.start_new_thread(self.__listener, ())
     
-    def listener(self):
-        '''Listener, should be started from listen() instead'''
+    def __listener(self):
+        '''Listener, listens the socket and sends complete commands to the handler'''
+        save = ''
+        
         while self.run:
-            data = self.socket.recv(512)
+            data = self.socket.recv(4096) # Reading Socket
             
-            # Reply to ping :)
-            if data.find('PING') != -1:
-                self.send('PONG ' + data.split()[1])
-            
-            # Handle user commands
-            user_input = data.split()
+            # Splitting at end of command
+            for line in data.split('\n'):
+                
+                # Handle the command IF THE COMMAND IS COMPLETE
+                if line.startswith(':') and line.endswith('\r'):
+                    self.__handler(line)
+                
+                # Save the noncomplete command for next run
+                elif line.startswith(':'):
+                    save = line
+                
+                # Recived the end of a command, but not start.
+                else:
+                    self.__handler(save + line)
+                    save = ''
+    
+    def __handler(self, line):
+        data = line.strip()
+        
+        if len(data) < 1: return True # Drop empty lines
+        
+        if data.startswith('PING'):
+            self.send(data.replace('PING', 'PONG'))
+        
+        # Handle user commands
+        user_input = data.split()
+        try:
+            chanop = user_input[1]
+        except IndexError:
+            chanop = 'FAIL' # Network failed
+        
+        # Static handling methods
+        if chanop == 'TOPIC': # We recived a topic update
+            topic = data.split(":",2)
+            self.topics[topic[1].split("TOPIC ")[1].rstrip(None)]=(topic[2].rstrip("\r\n"),time.time())
+        if chanop == '332': # We recived a topic update
+            topic = data.split(self.botname,1)[1].split(":")
+            self.topics[topic[0].rstrip(None).lstrip(None)]=(topic[1].rstrip("\r\n"),time.time())
+        
+        # Check for trigger
+        if chanop == 'PRIVMSG':
+            command = user_input[3]
             try:
-                chanop = user_input[1]
-            except IndexError:
-                chanop = 'FAIL' # Network failed
-            
-            #Static handling methods
-            if chanop == 'TOPIC': #We recived a topic update
-                topic = data.split(":",2)
-                self.topics[topic[1].split("TOPIC ")[1].rstrip(None)]=(topic[2].rstrip("\r\n"),time.time())
-            if chanop == '332': #We recived a topic update
-                topic = data.split(self.botname,1)[1].split(":")
-                self.topics[topic[0].rstrip(None).lstrip(None)]=(topic[1].rstrip("\r\n"),time.time())
-
-            # Check for trigger
-            if chanop == 'PRIVMSG':
-                command = user_input[3]
+                thread.start_new_thread(self.privmsghandler[command], (self, data))
+            except KeyError: pass # Unhandled
+        
+        if chanop == 'FAIL':
+            # Reconnect if failure
+            self.failed = True
+            while self.failed:
+                time.sleep(5)
                 try:
-                    thread.start_new_thread(self.privmsghandler[command], (self, data))
-                except KeyError: pass # Unhandled
-            elif chanop == 'FAIL':
-                # Reconnect if failure
-                self.failed = True
-                while self.failed:
-                    time.sleep(5)
-                    try:
-                        self.connect()
-                    except socket.error:
-                        self.failed = True
-                for chan in self.chanlist:
-                    self.join(chan, False)
+                    self.connect()
+                except socket.error:
+                    self.failed = True
             
-            # Always try chanop
-            try: thread.start_new_thread(self.chanophandler[chanop], (self, data))
-            except: pass # Unhandled
-            
-            # Debug messages
-            if self.debug == True:
-                print(data)
+            for chan in self.chanlist:
+                self.join(chan, False)
+        
+        # Always try chanop
+        try: thread.start_new_thread(self.chanophandler[chanop], (self, data))
+        except: pass # Unhandled
+        
+        # Debug messages
+        if self.debug == True:
+            print(data)
+        
