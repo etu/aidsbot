@@ -190,12 +190,12 @@ class aidsbot ():
                 
                 # Handle complete command
                 if line.startswith(':') and line.endswith('\r'):
-                    self.__handler(line)
+                    self.__handler(save + line)
                     save = ''
                 
                 # Handle beginning of command
                 elif line.startswith(':') and not line.endswith('\r'):
-                    save = line
+                    save = save + line
                 
                 # Handle end of command
                 elif not line.startswith(':') and line.endswith('\r'):
