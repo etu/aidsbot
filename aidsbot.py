@@ -187,24 +187,12 @@ class aidsbot ():
             
             # Splitting at end of command
             for line in data.split('\n'):
+                save = save + line # Store parts
                 
-                # Handle complete command
-                if line.startswith(':') and line.endswith('\r'):
-                    self.__handler(save + line)
+                # Send completed commands to the handler
+                if line.endswith('\r'):
+                    self.__handler(save)
                     save = ''
-                
-                # Handle beginning of command
-                elif line.startswith(':') and not line.endswith('\r'):
-                    save = save + line
-                
-                # Handle end of command
-                elif not line.startswith(':') and line.endswith('\r'):
-                    self.__handler(save + line)
-                    save = ''
-                
-                # Handle some middle part of command
-                else:
-                    save = save + line
     
     def __handler(self, line):
         data = line.strip()
