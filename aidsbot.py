@@ -62,6 +62,21 @@ class aidsbot ():
         except: pass
         self.failed = False
     
+    def send(self, command, override = False):
+        '''Send a raw command to the socket'''
+        
+        # Follow RFC 1459, do not send more than 512B
+        command=str(command)
+        if len(command) > 510:
+            raise Exception('IRCError')
+        
+        # Dont try to send if network has failed
+        if not self.failed or override:
+            self.socket.send('%s\r\n' % command)
+        
+        else:
+            return None
+    
     def join(self, channel, addlist = True):
         '''Join channel'''
         if addlist:
@@ -87,12 +102,12 @@ class aidsbot ():
             except KeyError:
                 timestamp=time.time()
                 self.topics[channel]=(None,timestamp)
-
+            
             self.send('TOPIC %s' % (channel))
-
+            
             while self.topics[channel][1] == timestamp:
                 time.sleep(0.01)
-
+            
             return(self.topics[channel][0])
         else:
             self.send('TOPIC %s %s' % (channel, topic))
@@ -124,23 +139,6 @@ class aidsbot ():
     def kick(self, channel, user, reason = ''):
         '''Kick user from channel for reason'''
         return self.send('KICK %s %s :%s' % (channel, user, reason))
-    
-    def send(self, command, override = False):
-        '''Send a raw command to the socket'''
-        
-        # Follow RFC 1459, do not send more than 512B
-        command=str(command)
-        if len(command) > 510:
-            raise Exception('IRCError')
-        
-        # Dont try to send if network has failed
-        if not self.failed or override:
-            if self.ssl:
-                self.socket.write('%s\r\n' % command)
-            else:
-                self.socket.send('%s\r\n' % command)
-        else:
-            return None
     
     def stop(self):
         '''Stop'''
@@ -178,54 +176,71 @@ class aidsbot ():
     
     def listen(self):
         '''Start listener in thread'''
-        thread.start_new_thread(self.listener, ())
+        thread.start_new_thread(self.__listener, ())
     
-    def listener(self):
-        '''Listener, should be started from listen() instead'''
+    def __listener(self):
+        '''Listener, listens the socket and sends complete commands to the handler'''
+        save = ''
+        
         while self.run:
-            data = self.socket.recv(512)
+            data = self.socket.recv(4096) # Reading Socket
             
-            # Reply to ping :)
-            if data.find('PING') != -1:
-                self.send('PONG ' + data.split()[1])
-            
-            # Handle user commands
-            user_input = data.split()
-            try:
-                chanop = user_input[1]
-            except IndexError:
-                chanop = 'FAIL' # Network failed
-            
-            #Static handling methods
-            if chanop == 'TOPIC': #We recived a topic update
-                topic = data.split(":",2)
-                self.topics[topic[1].split("TOPIC ")[1].rstrip(None)]=(topic[2].rstrip("\r\n"),time.time())
-            if chanop == '332': #We recived a topic update
-                topic = data.split(self.botname,1)[1].split(":")
-                self.topics[topic[0].rstrip(None).lstrip(None)]=(topic[1].rstrip("\r\n"),time.time())
-
-            # Check for trigger
-            if chanop == 'PRIVMSG':
-                command = user_input[3]
+            # Splitting at end of command
+            for line in data.split('\n'):
+                save = save + line # Store parts
+                
+                # Send completed commands to the handler
+                if line.endswith('\r'):
+                    self.__handler(save)
+                    save = ''
+    
+    def __handler(self, line):
+        data = line.strip()
+        
+        if len(data) < 1: return True # Drop empty lines
+        
+        if data.startswith('PING'):
+            self.send(data.replace('PING', 'PONG'))
+        
+        # Handle user commands
+        user_input = data.split()
+        try:
+            chanop = user_input[1]
+        except IndexError:
+            chanop = 'FAIL' # Network failed
+        
+        # Try custom chanop handlers
+        try: thread.start_new_thread(self.chanophandler[chanop], (self, data))
+        except: pass
+        
+        # Try custom triggers
+        if chanop == 'PRIVMSG':
+            triggers = user_input[3]
+            try: thread.start_new_thread(self.privmsghandler[triggers], (self, data))
+            except KeyError: pass
+        
+        # Static handling methods
+        elif chanop == 'TOPIC': # We recived a topic update
+            topic = data.split(":",2)
+            self.topics[topic[1].split("TOPIC ")[1].rstrip(None)]=(topic[2].rstrip("\r\n"),time.time())
+        elif chanop == '332': # We recived a topic update
+            topic = data.split(self.botname,1)[1].split(":")
+            self.topics[topic[0].rstrip(None).lstrip(None)]=(topic[1].rstrip("\r\n"),time.time())
+        
+        # Reconnect on failure
+        elif chanop == 'FAIL':
+            self.failed = True
+            while self.failed:
+                time.sleep(5)
                 try:
-                    thread.start_new_thread(self.privmsghandler[command], (self, data))
-                except KeyError: pass # Unhandled
-            elif chanop == 'FAIL':
-                # Reconnect if failure
-                self.failed = True
-                while self.failed:
-                    time.sleep(5)
-                    try:
-                        self.connect()
-                    except socket.error:
-                        self.failed = True
-                for chan in self.chanlist:
-                    self.join(chan, False)
+                    self.connect()
+                except socket.error:
+                    self.failed = True
             
-            # Always try chanop
-            try: thread.start_new_thread(self.chanophandler[chanop], (self, data))
-            except: pass # Unhandled
-            
-            # Debug messages
-            if self.debug == True:
-                print(data)
+            for chan in self.chanlist:
+                self.join(chan, False)
+        
+        # Debug messages
+        if self.debug == True:
+            print(data)
+
