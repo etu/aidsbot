@@ -118,7 +118,7 @@ class aidsbot ():
     
     def notice(self, target, message):
         '''Send a notice to target'''
-        return self.send('NOTICE %s %s' % (target, message))
+        return self.send('NOTICE %s :%s' % (target, message))
     
     def privmsg(self, target, message):
         '''Send message to target'''
