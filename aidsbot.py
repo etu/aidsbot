@@ -118,7 +118,7 @@ class aidsbot ():
     
     def notice(self, target, message):
         '''Send a notice to target'''
-        return self.send('NOTICE %s %s' % (target, message))
+        return self.send('NOTICE %s :%s' % (target, message))
     
     def privmsg(self, target, message):
         '''Send message to target'''
@@ -221,11 +221,12 @@ class aidsbot ():
         
         # Static handling methods
         elif chanop == 'TOPIC': # We recived a topic update
-            topic = data.split(":",2)
-            self.topics[topic[1].split("TOPIC ")[1].rstrip(None)]=(topic[2].rstrip("\r\n"),time.time())
+            topic = data.split('TOPIC ', 1)[1].strip().split(' :', 1)
+            self.topics[topic[0]] = topic[1]
+        
         elif chanop == '332': # We recived a topic update
-            topic = data.split(self.botname,1)[1].split(":")
-            self.topics[topic[0].rstrip(None).lstrip(None)]=(topic[1].rstrip("\r\n"),time.time())
+            topic = data.split(self.botname, 1)[1].strip().split(' :', 1)
+            self.topics[topic[0]] = topic[1]
         
         # Reconnect on failure
         elif chanop == 'FAIL':
