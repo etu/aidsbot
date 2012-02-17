@@ -4,7 +4,7 @@
 '''
 
 aidsbot - A simple irc bot library for python
-Copyright (C) 2011 Adam Hose <adis@blad.is>
+Copyright (C) 2011 Adam Hose <adis@blad.is> and Elis Axelsson <etu AT elis DOT nu>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
